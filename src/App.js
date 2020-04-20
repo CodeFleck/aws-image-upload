@@ -1,26 +1,85 @@
-import React from 'react';
-import logo from './logo.svg';
+import React, {useState, useEffect, useCallback} from 'react';
 import './App.css';
+import axios from "axios";
+import {useDropzone} from 'react-dropzone'
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
-}
+const UserProfiles = () => {
+	
+	const [userProfile, setUserProfile] = useState([]);
+	
+	const fetchUserProfiles = () => {
+		axios.get("http://localhost:8080/api/v1/user-profile")
+		.then(response  => {
+			console.log(response);
+			setUserProfile(response.data);
+			
+		})
+	} 
+	useEffect(() => {
+		fetchUserProfiles();
+	}, []);
+	return userProfile.map((userProfile, index) => {
+		return (
+			<div key={index}>
+			{userProfile.userProfileID ? (
+				<img
+					src={`http://localhost:8080/api/v1/user-profile/${userProfile.userProfileID}/image/download`}
+				/>
+			) : null}
+			<br /><br />
+			<h1>{userProfile.username}</h1>
+			<p>{userProfile.userProfileID}</p>
+			<Dropzone {...userProfile}/>
+			<br />
+			</div>
+		)
+	})
+};
 
-export default App;
+function Dropzone({ userProfileID }) {
+	const onDrop = useCallback(acceptedFiles => {
+		// Do something with the files
+		const file = acceptedFiles[0];
+		
+		console.log(file);
+		
+		const formData = new FormData();
+		formData.append("file", file);
+		
+		axios.post(`http://localhost:8080/api/v1/user-profile/${userProfileID}/image/upload`,
+			formData,
+			{
+				headers: {
+					"Content-Type": "multipart/form-data"
+				}
+			}).then(() => {
+				console.log("file upliaded successfully");
+			})
+			.catch(err => {
+				console.log(err);
+			});
+			//eslint-disable-next-line
+		}, [])
+		const {getRootProps, getInputProps, isDragActive} = useDropzone({onDrop})
+		
+		return (
+			<div {...getRootProps()}>
+			<input {...getInputProps()} />
+			{
+				isDragActive ?
+				<p>Drop the image here ...</p> :
+				<p>Drag 'n' drop profile image, or click to select profile image</p>
+			}
+			</div>
+		)
+	}
+	
+	function App() {
+		return (
+			<div className="App">
+			<UserProfiles />
+			</div>
+		);
+	}
+	
+	export default App;
